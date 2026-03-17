@@ -59,6 +59,22 @@ STAR_PLAYERS = {
     "Kings": ["De'Aaron Fox", "Domantas Sabonis"] 
 } 
 
+PLAYER_CN = { 
+    "LeBron James": "詹姆斯", "Anthony Davis": "戴維斯", "D'Angelo Russell": "羅素", "Austin Reaves": "里夫斯", 
+    "Nikola Jokic": "約基奇", "Jamal Murray": "莫瑞", "Aaron Gordon": "高登", "Michael Porter Jr.": "小波特", 
+    "Jayson Tatum": "塔圖姆", "Jaylen Brown": "布朗", "Kristaps Porzingis": "波辛吉斯", "Derrick White": "懷特", "Jrue Holiday": "哈勒戴", 
+    "Luka Doncic": "唐西奇", "厄文": "厄文", "Dereck Lively": "萊夫利", 
+    "Shai Gilgeous-Alexander": "亞歷山大", "Chet Holmgren": "霍姆格倫", "Jalen Williams": "威廉斯", 
+    "Anthony Edwards": "愛德華茲", "Rudy Gobert": "戈貝爾", "Karl-Anthony Towns": "唐斯", 
+    "Giannis Antetokounmpo": "字母哥", "Damian Lillard": "里拉德", "Khris Middleton": "米德爾頓", 
+    "Stephen Curry": "柯瑞", "Draymond Green": "格林", "Jonathan Kuminga": "庫明加", "Andrew Wiggins": "威金斯", 
+    "Kevin Durant": "杜蘭特", "Devin Booker": "布克", "Bradley Beal": "比爾", 
+    "Joel Embiid": "恩比德", "Tyrese Maxey": "馬克西", "Paul George": "喬治", 
+    "Kawhi Leonard": "雷納德", "James Harden": "哈登", 
+    "Jimmy Butler": "巴特勒", "Bam Adebayo": "阿德巴約", 
+    "De'Aaron Fox": "福克斯", "Domantas Sabonis": "沙波尼斯" 
+} 
+
 # ------------------------ 
 # 1 傷兵、數據與盤口引擎 
 # ------------------------ 
@@ -94,7 +110,7 @@ def get_injury_impact(team_name, raw_text):
                     out_players.append(player) 
     return min(penalty, 8.5), reports, has_gtd, out_players 
 
-# 🛡️ 實體檔案快取防護罩：NBA 數據存入本地硬碟，避免重複騷擾伺服器
+# 🛡️ 實體檔案快取防護罩：NBA 數據存入本地硬碟，脫掉多餘偽裝
 def fetch_nba_master_with_physical_cache(game_date_str): 
     cache_file = f"nba_cache_{game_date_str}.pkl"
     
@@ -106,53 +122,34 @@ def fetch_nba_master_with_physical_cache(game_date_str):
         except Exception:
             pass # 如果檔案損毀，就繼續往下重新抓取
 
-    # 如果沒有檔案，才啟動安全偽裝模式去抓資料
     game_date_obj = datetime.strptime(game_date_str, '%Y-%m-%d')
     date_api_format = game_date_obj.strftime('%m/%d/%Y') 
     yest_str = (game_date_obj - timedelta(days=1)).strftime('%Y-%m-%d')
-
-    ua_list = [
-        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36'
-    ]
-    custom_headers = {
-        'Host': 'stats.nba.com',
-        'User-Agent': np.random.choice(ua_list),
-        'Accept': 'application/json, text/plain, */*',
-        'Referer': 'https://www.nba.com/',
-        'Origin': 'https://www.nba.com',
-        'Connection': 'keep-alive',
-    }
     
     try:
         team_dict = {t["id"]: t["full_name"] for t in teams.get_teams()} 
         
-        sb = scoreboardv2.ScoreboardV2(game_date=game_date_str, headers=custom_headers, timeout=30) 
+        # 拿掉所有的 custom_headers 跟 timeout，用 V31.2 最原始能跑的素顏寫法
+        sb = scoreboardv2.ScoreboardV2(game_date=game_date_str) 
         games = sb.get_data_frames()[0].drop_duplicates(subset=['GAME_ID']) 
         line_score = sb.get_data_frames()[1] 
-        time.sleep(1.5) # 乖乖踩煞車
         
-        sb_yest = scoreboardv2.ScoreboardV2(game_date=yest_str, headers=custom_headers, timeout=30)
+        sb_yest = scoreboardv2.ScoreboardV2(game_date=yest_str)
         yest_games = sb_yest.get_data_frames()[0]
-        time.sleep(1.5)
         
         b2b_data = {}
         for _, y_row in yest_games.iterrows():
             b2b_data[y_row["HOME_TEAM_ID"]] = "Home"
             b2b_data[y_row["VISITOR_TEAM_ID"]] = "Away"
         
-        # 恢復 V31 的進階數據 (Advanced) 抓取，這樣才能拿到 PACE 和 OFF_RATING
-        s_h = leaguedashteamstats.LeagueDashTeamStats(measure_type_detailed_defense="Advanced", location_nullable="Home", date_to_nullable=date_api_format, headers=custom_headers, timeout=30).get_data_frames()[0] 
-        time.sleep(1.5)
+        s_h = leaguedashteamstats.LeagueDashTeamStats(measure_type_detailed_defense="Advanced", location_nullable="Home", date_to_nullable=date_api_format).get_data_frames()[0] 
         
-        s_a = leaguedashteamstats.LeagueDashTeamStats(measure_type_detailed_defense="Advanced", location_nullable="Road", date_to_nullable=date_api_format, headers=custom_headers, timeout=30).get_data_frames()[0] 
-        time.sleep(1.5)
+        s_a = leaguedashteamstats.LeagueDashTeamStats(measure_type_detailed_defense="Advanced", location_nullable="Road", date_to_nullable=date_api_format).get_data_frames()[0] 
         
-        p_stats = leaguedashplayerstats.LeagueDashPlayerStats(measure_type_detailed_defense="Advanced", date_to_nullable=date_api_format, headers=custom_headers, timeout=30).get_data_frames()[0] 
-        time.sleep(1.5)
+        p_stats = leaguedashplayerstats.LeagueDashPlayerStats(measure_type_detailed_defense="Advanced", date_to_nullable=date_api_format).get_data_frames()[0] 
         
         try:
-            s_last5 = leaguedashteamstats.LeagueDashTeamStats(measure_type_detailed_defense="Advanced", last_n_games=5, date_to_nullable=date_api_format, headers=custom_headers, timeout=30).get_data_frames()[0]
+            s_last5 = leaguedashteamstats.LeagueDashTeamStats(measure_type_detailed_defense="Advanced", last_n_games=5, date_to_nullable=date_api_format).get_data_frames()[0]
         except:
             s_last5 = pd.DataFrame()
 
@@ -165,7 +162,7 @@ def fetch_nba_master_with_physical_cache(game_date_str):
         return result_tuple
         
     except Exception as e:
-        st.sidebar.error(f"🚨 NBA 伺服器阻擋或逾時，請稍後再試。")
+        st.sidebar.error(f"🚨 NBA 伺服器阻擋或逾時，請稍後再試。錯誤細節：{e}")
         return {}, pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), {}, pd.DataFrame()
 
 # 🛡️ Odds 盤口檔案快取與額度擷取
@@ -444,4 +441,4 @@ else:
             st.divider()
             st.write(f"大分率: `{po:.1%}` | 小分率: `{pu:.1%}`")
 
-st.caption("NBA AI V33 - 實體裝甲版：物理檔案快取、API 額度追蹤、恢復 V31 核心高準度預測模型")
+st.caption("NBA AI V33 - 實體裝甲版：物理檔案快取、API 額度追蹤、恢復 V31 核心高準度預測模型 (無偽裝版)")
