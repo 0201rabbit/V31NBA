@@ -208,7 +208,7 @@ formatted_date = target_date.strftime('%Y-%m-%d')
 st.sidebar.divider()
 st.sidebar.markdown("### 🤖 自動化盤口 API")
 st.sidebar.caption("前往 The Odds API 免費註冊，即可解鎖 V31 職業戰略儀表板。")
-    api_key = st.sidebar.text_input("輸入 API 金鑰", type="password")
+api_key = st.sidebar.text_input("輸入 API 金鑰", type="password")
 
 st.title(f"🏀 NBA AI V31.1 職業戰略儀表板 ({formatted_date})") 
 
