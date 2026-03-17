@@ -188,7 +188,7 @@ def fetch_live_odds(api_key, target_date_str):
                 "last_updated": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             }, f)
 
-        # 恢復好讀的盤口解析迴圈 (拿掉容易報錯的一行文)
+        # 恢復好讀的盤口解析迴圈
         odds_dict = {}
         for game in data:
             home = game.get('home_team')
@@ -248,7 +248,6 @@ formatted_date = target_date.strftime('%Y-%m-%d')
 
 st.sidebar.divider()
 st.sidebar.markdown("### 🤖 The Odds API 授權與額度")
-# 乾淨俐落，只讀取輸入框，不讀 st.secrets
 api_key = st.sidebar.text_input("輸入 API 金鑰 (選填)", type="password")
 
 if st.sidebar.button("🔄 強制更新盤口 (清除今日盤口快取)"):
@@ -340,7 +339,6 @@ else:
             h_edge = (h_pie - 12) * 0.4 if h_pie > 12 else 0 
             a_edge = (a_pie - 12) * 0.4 if a_pie > 12 else 0 
             
-            # V31 核心公式復活，準確度回歸！
             h_s = round((h_base_rating * (game_pace/100)) + 2.5 - h_pen + h_edge, 1) 
             a_s = round((a_base_rating * (game_pace/100)) - a_pen + a_edge, 1) 
             
@@ -424,8 +422,13 @@ else:
         with col_a: 
             st.subheader("📝 陣容報告") 
             if s_g["reports"]: 
-                for r in s_g["reports"]: st.error(r) if "🚨" in r else st.warning(r)
-            else: st.success("✅ 目前無重大傷病。") 
+                for r in s_g["reports"]:
+                    if "🚨" in r:
+                        st.error(r)
+                    else:
+                        st.warning(r)
+            else:
+                st.success("✅ 目前無重大傷病。") 
             
         with col_b: 
             st.subheader("🎲 動態 EV 模擬") 
@@ -441,4 +444,4 @@ else:
             st.divider()
             st.write(f"大分率: `{po:.1%}` | 小分率: `{pu:.1%}`")
 
-st.caption("NBA AI V33 - 實體裝甲版：物理檔案快取、API 額度追蹤、恢復 V31 核心高準度預測模型 (無偽裝版)")
+st.caption("NBA AI V33 - 實體裝甲版：物理檔案快取、API 額度追蹤、恢復 V31 核心高準度預測模型 (修復語法衝突)")
